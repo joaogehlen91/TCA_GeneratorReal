@@ -29,7 +29,7 @@ public class TCA_RealGenerator implements IAlgorithm
 		double xmin = Double.parseDouble(algorithmParameters.get("xmin"));
 		double ymax = Double.parseDouble(algorithmParameters.get("ymax"));
 		double ymin = Double.parseDouble(algorithmParameters.get("ymin"));
-		double R = Integer.parseInt(algorithmParameters.get("R"));
+		int R = Integer.parseInt(algorithmParameters.get("R"));
 		double d = Double.parseDouble(algorithmParameters.get("d"));
 		double linkCapacities = Double.parseDouble(algorithmParameters.get("linkCapacities"));
 
@@ -37,6 +37,8 @@ public class TCA_RealGenerator implements IAlgorithm
 		netPlan.removeAllSRGs();
 		
 		R = fixNumberRegion(R);
+		Integer cap = capacityRegion(R, xmin, xmax, ymin, ymax, d);
+		
 
 		/* Generate node XY position table */
 		for (int n = 0; n < N; n++)
@@ -46,9 +48,6 @@ public class TCA_RealGenerator implements IAlgorithm
 			netPlan.addNode(xCoord, yCoord, "Node " + n, null);
 		}
 		
-		for (int i = 0; i < R; i++){
-			
-		}
 
 		Set<Long> nodeIds = netPlan.getNodeIds();
 		double dist_max = -Double.MAX_VALUE;
@@ -77,7 +76,7 @@ public class TCA_RealGenerator implements IAlgorithm
 			}
 		}
 
-		return "Ok!";
+		return "Ok!" + " Cap " + cap + "Reg "+ R;
 	}
 
 	@Override
@@ -115,33 +114,39 @@ public class TCA_RealGenerator implements IAlgorithm
 		return aux.toString();
 	}
 	
-	public Double capacityRegion(){
-		
-		
-		return null;
+	public Integer capacityRegion(int r, double xmin, double xmax, double ymin, double ymax, double d){
+		double areaReg = areaRegion(r, xmin, xmax, ymin, ymax);
+		return (int)(areaReg/(d*d));
 	}
 	
-	public Double areaRegion(int R){
-		
-		
-		return null;
-	}
-	
-	public int fixNumberRegion(double r){
-		boolean prime = true;
-		for(int i=2; i<r; i++){
-			if(r % i == 0){
-				prime = false;
+	public Double areaRegion(int r, double xmin, double xmax, double ymin, double ymax){
+		double p1=0, p2=0;
+		for(int i=(r-1); i>1; i--){
+			if(((r % i) == 0) && isPrime(i)){
+				p1 = i;
+				p2 = (r/i);
 				break;
+			}			
+		}
+		double area = ((xmax-xmin)/p1) * ((ymax-ymin)/p2);
+		return area;
+	}
+	
+	
+	public int fixNumberRegion(int r){
+		if(isPrime(r)){
+			r = r + 1;
+		}
+		return (int) r;
+	}
+	
+	public boolean isPrime(int n){
+		for(int i=2; i<n; i++){
+			if(n % i == 0){
+				return false;
 			}
 		}
-
-		if(prime){
-			r = r + 1;
-			return (int) r;
-		}
-		
-		return (int) r;
+		return true;
 	}
 	
 	
