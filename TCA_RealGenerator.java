@@ -16,11 +16,16 @@ import com.net2plan.utils.Triple;
 import java.util.*;
 
 public class TCA_RealGenerator implements IAlgorithm
-{
+{	
+
+	public static Map<String, String> region = new HashMap<String, String>();
+	public static double lin, col;
+	
 	@Override
 	public String executeAlgorithm(NetPlan netPlan, Map<String, String> algorithmParameters, Map<String, String> net2planParameters)
 	{
 		Random r = new Random();
+		
 
 		int N = Integer.parseInt(algorithmParameters.get("N"));
 		double alpha = Double.parseDouble(algorithmParameters.get("alpha"));
@@ -37,16 +42,35 @@ public class TCA_RealGenerator implements IAlgorithm
 		netPlan.removeAllSRGs();
 		
 		R = fixNumberRegion(R);
-		Integer cap = capacityRegion(R, xmin, xmax, ymin, ymax, d);
+		int cap = capacityRegion(R, xmin, xmax, ymin, ymax, d);
+		double sidex = Double.parseDouble(region.get("sidex"));
+		double sidey = Double.parseDouble(region.get("sidey"));
+
+		int ninreg = r.nextInt(Math.min(N, cap));
+		
+		//laço para percorrer as regioes e inserir os nodos
+		for(int x = 0; x < lin; x++){
+			for(int y = 0; y < col; y++){
+				ninreg = r.nextInt(Math.min(N, cap));
+				for(int k = 0; k < ninreg; k++){
+					double xCoord2 = sidex*x + (sidex*(x+1) - (sidex*x)) * r.nextDouble();
+					double yCoord2 = sidey*y + (sidey*(y+1) - (sidey*y)) * r.nextDouble();
+					netPlan.addNode(xCoord2, yCoord2, "Node " + k, null);
+				}
+				N = N-ninreg;
+			}
+		}
+		
+		
 		
 
 		/* Generate node XY position table */
-		for (int n = 0; n < N; n++)
-		{
-			double xCoord = xmin + (xmax - xmin) * r.nextDouble();
-			double yCoord = ymin + (ymax - ymin) * r.nextDouble();
-			netPlan.addNode(xCoord, yCoord, "Node " + n, null);
-		}
+//		for (int n = 0; n < N; n++)
+//		{
+//			double xCoord = xmin + (xmax - xmin) * r.nextDouble();
+//			double yCoord = ymin + (ymax - ymin) * r.nextDouble();
+//			netPlan.addNode(xCoord, yCoord, "Node " + n, null);
+//		}
 		
 
 		Set<Long> nodeIds = netPlan.getNodeIds();
@@ -75,8 +99,8 @@ public class TCA_RealGenerator implements IAlgorithm
 					netPlan.addLink(originNodeId, destinationNodeId, linkCapacities, dist, null);
 			}
 		}
-
-		return "Ok!" + " Cap " + cap + "Reg "+ R;
+		
+		return "Ok!" + " 42  " + region.get("area");
 	}
 
 	@Override
@@ -128,7 +152,19 @@ public class TCA_RealGenerator implements IAlgorithm
 				break;
 			}			
 		}
+		
 		double area = ((xmax-xmin)/p1) * ((ymax-ymin)/p2);
+		
+		region.put("area", String.valueOf(area));
+		if((xmax-xmin) < (ymax-ymin)){
+			region.put("sidex", String.valueOf((xmax-xmin)/p1));
+			region.put("sidey", String.valueOf((ymax-ymin)/p2));
+			lin = p2; col = p1;
+		}else{
+			region.put("sidex", String.valueOf((xmax-xmin)/p2));
+			region.put("sidey", String.valueOf((ymax-ymin)/p1));
+			lin = p1; col = p2;
+		}
 		return area;
 	}
 	
