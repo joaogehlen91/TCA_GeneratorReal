@@ -40,41 +40,46 @@ public class TCA_RealGenerator implements IAlgorithm
 
 		netPlan.removeAllNodes();
 		netPlan.removeAllSRGs();
+		netPlan.reset();
 		
 		R = fixNumberRegion(R);
 		int cap = capacityRegion(R, xmin, xmax, ymin, ymax, d);
 		double sidex = Double.parseDouble(region.get("sidex"));
 		double sidey = Double.parseDouble(region.get("sidey"));
 
-		int ninreg = r.nextInt(Math.min(N, cap));
-		
-		//laço para percorrer as regioes e inserir os nodos
-		for(int x = 0; x < lin; x++){
-			for(int y = 0; y < col; y++){
-				ninreg = r.nextInt(Math.min(N, cap));
-				for(int k = 0; k < ninreg; k++){
-					double xCoord2 = sidex*x + (sidex*(x+1) - (sidex*x)) * r.nextDouble();
-					double yCoord2 = sidey*y + (sidey*(y+1) - (sidey*y)) * r.nextDouble();
-					netPlan.addNode(xCoord2, yCoord2, "Node " + k, null);
+		int ninreg = 0;
+				
+		/* laço para percorrer as regioes e inserir os nodos em cada regiao
+		 * 'sidex' e 'sidey' são os tamanhos dos lados de cada regiao(para poder navegar no plano);
+		 * 'ninreg' guarda a quantidade de nos que vão são inseridos na região;
+		*/
+		int reg = 0; 		
+		while(N > 1){
+			for(int x = 0; x < lin; x++){
+				for(int y = 0; y < col; y++){
+					ninreg = r.nextInt(Math.min(N, (int)cap));
+					for(int k = 0; k < ninreg; k++){
+						double xCoord2 = randomRegion(sidex*x, sidex*(x+1));
+						double yCoord2 = randomRegion(sidey*y, sidey*(y+1));
+						netPlan.addNode(xCoord2, yCoord2, "Node " + k +"reg "+reg, null);
+					}
+					N = (int)(N - ninreg);
+					reg++;
 				}
-				N = N-ninreg;
 			}
 		}
 		
-		
-		
-
-		/* Generate node XY position table */
-//		for (int n = 0; n < N; n++)
-//		{
-//			double xCoord = xmin + (xmax - xmin) * r.nextDouble();
-//			double yCoord = ymin + (ymax - ymin) * r.nextDouble();
-//			netPlan.addNode(xCoord, yCoord, "Node " + n, null);
-//		}
+		// se ainda tem um nó para inserir, insere na ultima região, isso ocorre por causa do sorteio, pode ser que o ultimo não sortei.
+		if(N > 0){
+			double xCoord2 = randomRegion(sidex*(lin-1), sidex*lin);
+			double yCoord2 = randomRegion(sidey*(col-1), sidey*col);
+			netPlan.addNode(xCoord2, yCoord2, "Node extra" +"reg "+sidex*(lin-1)+" "+sidey*col+" "+sidex+" "+sidey, null);
+		}
 		
 
 		Set<Long> nodeIds = netPlan.getNodeIds();
-		double dist_max = -Double.MAX_VALUE;
+		//double dist_max = -Double.MAX_VALUE;
+		double dist_max = d;
 		for (long destinationNodeId : nodeIds)
 		{
 			for (long originNodeId : nodeIds)
@@ -100,7 +105,7 @@ public class TCA_RealGenerator implements IAlgorithm
 			}
 		}
 		
-		return "Ok!" + " 42  " + region.get("area");
+		return "Ok!" + "  " + region.get("area")+"N "+N;
 	}
 
 	@Override
@@ -138,6 +143,13 @@ public class TCA_RealGenerator implements IAlgorithm
 		return aux.toString();
 	}
 	
+	public double randomRegion(double min, double max){
+		Random r = new Random();
+		double coord = min + (max - min) * r.nextDouble();
+		return coord;
+	}
+	
+	// retorno a capacidade de cada região
 	public Integer capacityRegion(int r, double xmin, double xmax, double ymin, double ymax, double d){
 		double areaReg = areaRegion(r, xmin, xmax, ymin, ymax);
 		return (int)(areaReg/(d*d));
@@ -147,8 +159,8 @@ public class TCA_RealGenerator implements IAlgorithm
 		double p1=0, p2=0;
 		for(int i=(r-1); i>1; i--){
 			if(((r % i) == 0) && isPrime(i)){
-				p1 = i;
-				p2 = (r/i);
+				p1 = (r/i);
+				p2 = i;
 				break;
 			}			
 		}
@@ -156,14 +168,14 @@ public class TCA_RealGenerator implements IAlgorithm
 		double area = ((xmax-xmin)/p1) * ((ymax-ymin)/p2);
 		
 		region.put("area", String.valueOf(area));
-		if((xmax-xmin) < (ymax-ymin)){
+		if((xmax-xmin) <= (ymax-ymin)){
 			region.put("sidex", String.valueOf((xmax-xmin)/p1));
 			region.put("sidey", String.valueOf((ymax-ymin)/p2));
-			lin = p2; col = p1;
+			lin = p1; col = p2;
 		}else{
 			region.put("sidex", String.valueOf((xmax-xmin)/p2));
 			region.put("sidey", String.valueOf((ymax-ymin)/p1));
-			lin = p1; col = p2;
+			lin = p2; col = p1;
 		}
 		return area;
 	}
