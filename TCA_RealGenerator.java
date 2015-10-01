@@ -12,20 +12,23 @@ package com.net2plan.examples.netDesignAlgorithm.tca;
 
 import com.net2plan.interfaces.networkDesign.IAlgorithm;
 import com.net2plan.interfaces.networkDesign.NetPlan;
+import com.net2plan.utils.Pair;
 import com.net2plan.utils.Triple;
+
+
 import java.util.*;
 
 public class TCA_RealGenerator implements IAlgorithm
 {	
 
-	public static Map<String, String> region = new HashMap<String, String>();
 	public static double lin, col;
+	public static int p1 = 0, p2 = 0;
+	List<Pair<Integer, Integer>> posicoes = new ArrayList<Pair<Integer, Integer>>();
 	
 	@Override
 	public String executeAlgorithm(NetPlan netPlan, Map<String, String> algorithmParameters, Map<String, String> net2planParameters)
 	{
 		Random r = new Random();
-		
 
 		int N = Integer.parseInt(algorithmParameters.get("N"));
 		double alpha = Double.parseDouble(algorithmParameters.get("alpha"));
@@ -42,44 +45,128 @@ public class TCA_RealGenerator implements IAlgorithm
 		netPlan.removeAllSRGs();
 		netPlan.reset();
 		
-		R = fixNumberRegion(R);
-		int cap = capacityRegion(R, xmin, xmax, ymin, ymax, d);
-		double sidex = Double.parseDouble(region.get("sidex"));
-		double sidey = Double.parseDouble(region.get("sidey"));
+		// função para arrumar o numero de regioes, caso ele é primo.		
+		R = fixNumberRegion(R);  
+	
+		// x e y vão ser o tamanho do plano, ou seja o tamanho da matriz 
+		int x = (int) (xmax-xmin);    
+		int y = (int) (ymax-ymin);
+		int plano[][] = new int[x][y];
+		
+		// zera todo o plano
+		for (int[] row: plano) 		
+			Arrays.fill(row, 0);
+		
+		/* 
+		 * laço para encontrar p1 e p2. usado para separar as regioes de forma igual,
+	     * conforme explicado no artigo do Professor. 
+	     * p2 >= p1
+	     * */
+		for(int i= (R-1); i > 1; i--){ 			
+			if(((R % i) == 0) && isPrime(i)){	
+				p1 = (R/i);
+				p2 = i;
+				break;
+			}			
+		}
 
-		int ninreg = 0;
-				
-		/* laço para percorrer as regioes e inserir os nodos em cada regiao
-		 * 'sidex' e 'sidey' são os tamanhos dos lados de cada regiao(para poder navegar no plano);
-		 * 'ninreg' guarda a quantidade de nos que vão são inseridos na região;
-		*/
-		int reg = 0; 		
-		while(N > 1){
-			for(int x = 0; x < lin; x++){
-				for(int y = 0; y < col; y++){
-					ninreg = r.nextInt(Math.min(N, (int)cap));
-					for(int k = 0; k < ninreg; k++){
-						double xCoord2 = randomRegion(sidex*x, sidex*(x+1));
-						double yCoord2 = randomRegion(sidey*y, sidey*(y+1));
-						netPlan.addNode(xCoord2, yCoord2, "Node " + k +"reg "+reg, null);
-					}
-					N = (int)(N - ninreg);
-					reg++;
-				}
+		// as duas proximas linhas são para calcular a area de cadaReg para calcular a capacidade de cada regiao
+		double areaReg = ((xmax-xmin)/p1) * ((ymax-ymin)/p2);
+		int cap = (int)(areaReg/(d*d));
+		
+		// essas 10 linhas abaixo são para didivir melhor o numero de regioes, caso o plano nao seja um quadrado perfeito(x = y)
+		// se o lado x for menor ou igual que y (x<=y) então plano vai ser dividido no lado do x por p1(que é o menor numero) e o
+		// lado y por p2 já que é lado maior. Resumindo: divide o lado maior do plano com o numero maior de p(p1 ou p2).
+		int sidex, sidey;      
+		if((xmax-xmin) <= (ymax-ymin)){
+			sidex = (int) ((xmax-xmin)/p1);
+			sidey = (int) ((ymax-ymin)/p2);
+			lin = p1; col = p2;
+		}else{
+			sidex = (int) ((xmax-xmin)/p2);
+			sidey = (int) ((ymax-ymin)/p1);
+			lin = p2; col = p1;
+		}
+		
+		// matriz de R linhas para guardar onde inicia e termina cada região.
+		// xi, yi, xf, yf
+		//  0,  0,  2,  2
+		//	0, 	2,  4,  4
+		int indiceRegiao[][] = new int[R][4];
+		int nreg = 0;
+		for(int i = 0; i < lin; i++){
+			for(int j = 0; j < col; j++){
+				indiceRegiao[nreg][0] = sidex * i;
+				indiceRegiao[nreg][1] = sidey * j;
+				indiceRegiao[nreg][2] = sidex * (i+1);
+				indiceRegiao[nreg][3] = sidey * (j+1);
+				nreg++;
 			}
 		}
 		
-		// se ainda tem um nó para inserir, insere na ultima região, isso ocorre por causa do sorteio, pode ser que o ultimo não sortei.
-		if(N > 0){
-			double xCoord2 = randomRegion(sidex*(lin-1), sidex*lin);
-			double yCoord2 = randomRegion(sidey*(col-1), sidey*col);
-			netPlan.addNode(xCoord2, yCoord2, "Node extra" +"reg "+sidex*(lin-1)+" "+sidey*col+" "+sidex+" "+sidey, null);
+		System.out.println("Lin = "+lin);
+		System.out.println("Col = "+col);
+		System.out.println("Capacidade de cada regiao = "+cap);
+		
+		for (int[] is : indiceRegiao) {
+			for (int i : is) {
+				System.out.print("\t"+i);
+			}
+			System.out.println();
 		}
 		
+		// laço que vai percorrer as regiçoes para posteriormente inserir os nodos.
+		int nodosInReg = 0;
+		for (int i = 0; i < R; i++) {
+				
+			// pega as posiçoes de inicio e fim da regiao i.
+			int xi = indiceRegiao[i][0];		
+			int yi = indiceRegiao[i][1];
+			int xf = indiceRegiao[i][2];
+			int yf = indiceRegiao[i][3];
+			
+			// preenche o vetor de posições com todas as posições da região i.
+			posicoes.clear();			
+			for (int ir = xi; ir < xf; ir++) {
+				for (int jr = yi; jr < yf; jr++) {
+					posicoes.add(Pair.of(ir, jr));
+				}
+			}
+			System.out.println("Tamanho do vetor de posicoes = "+posicoes.size());
+			
+			if(N == 1){
+				nodosInReg = 1;
+			}else{
+				nodosInReg = r.nextInt(Math.min((i == 0 ? N/2 : N), (int)cap)); //sorteia quantos nodos vão ser inseridos na região R
+			}
+			System.out.println("Numero de nodos sorteados = "+nodosInReg);
+			
+			// laço para inserir cada nodo k na região i.
+			for(int k = 0; k < nodosInReg; k++){
+				if(posicoes.size() > 0){
+					int posicaoSorteada = r.nextInt(posicoes.size());
+					int pi = posicoes.get(posicaoSorteada).getFirst();
+					int pj = posicoes.get(posicaoSorteada).getSecond();
+					
+					if(plano[pi][pj] == 0){
+						netPlan.addNode(pi, pj, "Node " + k +"reg " + i, null);
+						posicoes.remove(posicaoSorteada);
+						plano = insereNodo(pi, pj, plano, x, y, (int) d);
+						N--;
+					}
+				}
+			}
+			if(N==0) break;
+		}
 
+		
+		
+		/* daqui pra baixo é pra inserir os links(arestas)  */
+		
+		
+		
 		Set<Long> nodeIds = netPlan.getNodeIds();
-		//double dist_max = -Double.MAX_VALUE;
-		double dist_max = d;
+		double dist_max = -Double.MAX_VALUE;
 		for (long destinationNodeId : nodeIds)
 		{
 			for (long originNodeId : nodeIds)
@@ -100,12 +187,39 @@ public class TCA_RealGenerator implements IAlgorithm
 				double dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
 				double p = alpha * Math.exp(-dist / (beta * dist_max));
 
-				if (r.nextDouble() < p)
-					netPlan.addLink(originNodeId, destinationNodeId, linkCapacities, dist, null);
+				//if (r.nextDouble() < p)
+				//	netPlan.addLink(originNodeId, destinationNodeId, linkCapacities, dist, null);
 			}
 		}
 		
-		return "Ok!" + "  " + region.get("area")+"N "+N;
+		
+		// laço para mostrar o plano.
+		for (int[] row: plano){
+			for(int i: row){
+				System.out.print(i+" ");
+			}
+			System.out.println();
+		}
+		
+		// mensagem de retorno.
+		return "Ok! | Nós não inseridos: " + N;
+	}
+
+	private int[][] insereNodo(int pi, int pj, int[][] plano, int x, int y, int d) {
+		plano[pi][pj] = 2;
+		int lini = Math.max(0, pi-d);
+		int lfim = Math.min(x-1, pi+d);
+		int cini = Math.max(0, pj-d);
+		int cfim = Math.min(y-1, pj+d);
+		
+		for (int l = lini; l <= lfim; l++) {
+			for (int c = cini; c <= cfim; c++) {
+				posicoes.remove(Pair.of(l, c));
+				if(l != pi || c != pj)
+					plano[l][c] = 1;
+			}
+		}
+		return plano;
 	}
 
 	@Override
@@ -129,7 +243,6 @@ public class TCA_RealGenerator implements IAlgorithm
 	public String getDescription()
 	{
 		String NEWLINE = String.format("%n");
-
 		StringBuilder aux = new StringBuilder();
 		aux.append("Descricao teste");
 		//aux.append("This algorithm implements the random network topology generator introduced in Waxman (1988). The Waxman's generator is a geographic model for the growth of a network. In this model nodes are uniformly distributed in a given area and links are added according to probabilities that depend on the distances between the nodes. The probability to have a link between nodes i and j is given by:");
@@ -139,63 +252,22 @@ public class TCA_RealGenerator implements IAlgorithm
 		aux.append(NEWLINE);
 		aux.append(NEWLINE);
 		//aux.append("where 0<alpha, beta<=1, d is the distance from i to j, and d_max is the maximum distance between any two nodes. An increase in the parameter alpha increases the probability of edges between any nodes in the network, while an increase in beta yields a larger ratio of long links to short links.");
-
 		return aux.toString();
-	}
-	
-	public double randomRegion(double min, double max){
-		Random r = new Random();
-		double coord = min + (max - min) * r.nextDouble();
-		return coord;
-	}
-	
-	// retorno a capacidade de cada região
-	public Integer capacityRegion(int r, double xmin, double xmax, double ymin, double ymax, double d){
-		double areaReg = areaRegion(r, xmin, xmax, ymin, ymax);
-		return (int)(areaReg/(d*d));
-	}
-	
-	public Double areaRegion(int r, double xmin, double xmax, double ymin, double ymax){
-		double p1=0, p2=0;
-		for(int i=(r-1); i>1; i--){
-			if(((r % i) == 0) && isPrime(i)){
-				p1 = (r/i);
-				p2 = i;
-				break;
-			}			
-		}
-		
-		double area = ((xmax-xmin)/p1) * ((ymax-ymin)/p2);
-		
-		region.put("area", String.valueOf(area));
-		if((xmax-xmin) <= (ymax-ymin)){
-			region.put("sidex", String.valueOf((xmax-xmin)/p1));
-			region.put("sidey", String.valueOf((ymax-ymin)/p2));
-			lin = p1; col = p2;
-		}else{
-			region.put("sidex", String.valueOf((xmax-xmin)/p2));
-			region.put("sidey", String.valueOf((ymax-ymin)/p1));
-			lin = p2; col = p1;
-		}
-		return area;
 	}
 	
 	
 	public int fixNumberRegion(int r){
-		if(isPrime(r)){
+		if(isPrime(r))
 			r = r + 1;
-		}
 		return (int) r;
 	}
 	
 	public boolean isPrime(int n){
 		for(int i=2; i<n; i++){
-			if(n % i == 0){
+			if(n % i == 0)
 				return false;
-			}
 		}
 		return true;
 	}
-	
-	
+
 }
