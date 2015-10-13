@@ -23,7 +23,9 @@ public class TCA_RealGenerator implements IAlgorithm
 
 	public static double lin, col;
 	public static int p1 = 0, p2 = 0;
-	List<Pair<Integer, Integer>> posicoes = new ArrayList<Pair<Integer, Integer>>();
+	List<Pair<Integer, Integer>> posicoes = new ArrayList<Pair<Integer, Integer>>();	
+	
+	List<List<Long>> idNodesRegioes = new ArrayList<List<Long>>();
 	
 	@Override
 	public String executeAlgorithm(NetPlan netPlan, Map<String, String> algorithmParameters, Map<String, String> net2planParameters)
@@ -45,8 +47,9 @@ public class TCA_RealGenerator implements IAlgorithm
 		netPlan.removeAllSRGs();
 		netPlan.reset();
 		
-		// função para arrumar o numero de regioes, caso ele é primo.		
-		R = fixNumberRegion(R);  
+		// função para arrumar o numero de regioes, caso ele é primo.
+		if(R > 2)
+			R = fixNumberRegion(R);
 	
 		// x e y vão ser o tamanho do plano, ou seja o tamanho da matriz 
 		int x = (int) (xmax-xmin);    
@@ -62,7 +65,7 @@ public class TCA_RealGenerator implements IAlgorithm
 	     * conforme explicado no artigo do Professor. 
 	     * p2 >= p1
 	     * */
-		for(int i= (R-1); i > 1; i--){ 			
+		for(int i = (R-1); i >= 1; i--){ 			
 			if(((R % i) == 0) && isPrime(i)){	
 				p1 = (R/i);
 				p2 = i;
@@ -115,8 +118,9 @@ public class TCA_RealGenerator implements IAlgorithm
 			System.out.println();
 		}
 		
-		// laço que vai percorrer as regiçoes para posteriormente inserir os nodos.
+		// laço que vai percorrer as regiões para posteriormente inserir os nodos.
 		int nodosInReg = 0;
+		idNodesRegioes.clear();
 		for (int i = 0; i < R; i++) {
 				
 			// pega as posiçoes de inicio e fim da regiao i.
@@ -142,6 +146,7 @@ public class TCA_RealGenerator implements IAlgorithm
 			System.out.println("Numero de nodos sorteados = "+nodosInReg);
 			
 			// laço para inserir cada nodo k na região i.
+			List<Long> idNodesReg = new ArrayList<Long>();
 			for(int k = 0; k < nodosInReg; k++){
 				if(posicoes.size() > 0){
 					int posicaoSorteada = r.nextInt(posicoes.size());
@@ -149,22 +154,87 @@ public class TCA_RealGenerator implements IAlgorithm
 					int pj = posicoes.get(posicaoSorteada).getSecond();
 					
 					if(plano[pi][pj] == 0){
-						netPlan.addNode(pi, pj, "Node " + k +"reg " + i, null);
+						//netPlan.addNode(pi, pj, k+" "+i, null);
+						idNodesReg.add(netPlan.addNode(pi, pj, k+" "+i, null));
 						posicoes.remove(posicaoSorteada);
 						plano = insereNodo(pi, pj, plano, x, y, (int) d);
 						N--;
 					}
 				}
 			}
+			idNodesRegioes.add(idNodesReg);
 			if(N==0) break;
 		}
 
 		
-		
 		/* daqui pra baixo é pra inserir os links(arestas)  */
+		for (List<Long> reg : idNodesRegioes) {
+			
+			double dist_max = -Double.MAX_VALUE;
+			for (long destinationNodeId : reg)
+			{
+				for (long originNodeId : reg)
+				{
+					if (originNodeId >= destinationNodeId) break;
+
+					double dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
+					if (dist > dist_max) dist_max = dist;
+				}
+			}
+			
+			
+			int i = 0;
+			List<Long> regOrdenada = new ArrayList<Long>();
+			if(!reg.isEmpty()) regOrdenada.add(reg.get(i));
+			System.out.println(reg);
+			while(reg.size()>0){
+				int nexti = 0;
+				long originNodeId = reg.get(i), idD = 0;
+				double pmax = 0, dist = 0;
+				
+				for (int j = 1; j < reg.size(); j++) {
+					long destinationNodeId = reg.get(j);
+					if (originNodeId == destinationNodeId) continue;
+					
+					dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
+					double p = alpha * Math.exp(-dist / (beta * dist_max));
+					
+					if(p > pmax) {
+						pmax = p;
+						idD = destinationNodeId;
+						nexti = j;
+					}
+				}
+				
+				regOrdenada.add(idD);
+				System.out.print("+>");
+				System.out.println(regOrdenada);
+				//netPlan.addLink(originNodeId, idD, linkCapacities, dist, null);
+				reg.remove(i);
+				if(i>nexti){
+					i = nexti;
+				}else{
+					i = (nexti -1);
+				}
+				
+				System.out.print("->");
+				System.out.println(reg);
+				System.out.println();
+
+			}
+			for (int j = 1; j < regOrdenada.size(); j++) {
+				long origin = regOrdenada.get(j-1), destination = regOrdenada.get(j);
+				if (origin == destination) continue;
+				netPlan.addLink(origin, destination, linkCapacities, 10, null);
+			}
+			
+			//System.out.println(regOrdenada);
+			System.out.println();
+			//netPlan.addLink(originNodeId, idD, linkCapacities, dist, null);
+			
+		}
 		
-		
-		
+		/*
 		Set<Long> nodeIds = netPlan.getNodeIds();
 		double dist_max = -Double.MAX_VALUE;
 		for (long destinationNodeId : nodeIds)
@@ -177,8 +247,11 @@ public class TCA_RealGenerator implements IAlgorithm
 				if (dist > dist_max) dist_max = dist;
 			}
 		}
-
+		*/
+		
 		/* Generate a directed link between each node pair with probability p = alpha * exp(-distance/(beta * max_distance)) */
+		
+		/*
 		for (long destinationNodeId : nodeIds)
 		{
 			for (long originNodeId : nodeIds)
@@ -187,22 +260,18 @@ public class TCA_RealGenerator implements IAlgorithm
 				double dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
 				double p = alpha * Math.exp(-dist / (beta * dist_max));
 
-				//if (r.nextDouble() < p)
-				//	netPlan.addLink(originNodeId, destinationNodeId, linkCapacities, dist, null);
+				if (r.nextDouble() < p)
+					netPlan.addLink(originNodeId, destinationNodeId, linkCapacities, dist, null);
 			}
 		}
+		*/		
 		
 		
-		// laço para mostrar o plano.
-		for (int[] row: plano){
-			for(int i: row){
-				System.out.print(i+" ");
-			}
-			System.out.println();
-		}
+//		for (List<Long> long1 : idNodesRegioes) {
+//			System.out.println(long1);
+//		}
 		
-		// mensagem de retorno.
-		return "Ok! | Nós não inseridos: " + N;
+		return "Ok! | Nodos não inseridos: " + N;
 	}
 
 	private int[][] insereNodo(int pi, int pj, int[][] plano, int x, int y, int d) {
