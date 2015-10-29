@@ -24,7 +24,6 @@ public class TCA_RealGenerator implements IAlgorithm
 	public static double lin, col;
 	public static int p1 = 0, p2 = 0;
 	List<Pair<Integer, Integer>> posicoes = new ArrayList<Pair<Integer, Integer>>();	
-	
 	List<List<Long>> idNodesRegioes = new ArrayList<List<Long>>();
 	
 	@Override
@@ -47,7 +46,7 @@ public class TCA_RealGenerator implements IAlgorithm
 		netPlan.removeAllSRGs();
 		netPlan.reset();
 		
-		// função para arrumar o numero de regioes, caso ele é primo.
+		// função para arrumar o numero de regioes, caso seja primo.
 		if(R > 2)
 			R = fixNumberRegion(R);
 	
@@ -107,19 +106,19 @@ public class TCA_RealGenerator implements IAlgorithm
 			}
 		}
 		
-		System.out.println("Lin = "+lin);
-		System.out.println("Col = "+col);
-		System.out.println("Capacidade de cada regiao = "+cap);
-		
-		for (int[] is : indiceRegiao) {
-			for (int i : is) {
-				System.out.print("\t"+i);
-			}
-			System.out.println();
-		}
+//		System.out.println("Lin = "+lin);
+//		System.out.println("Col = "+col);
+//		System.out.println("Capacidade de cada regiao = "+cap);
+//		
+//		for (int[] is : indiceRegiao) {
+//			for (int i : is) {
+//				System.out.print("\t"+i);
+//			}
+//			System.out.println();
+//		}
 		
 		// laço que vai percorrer as regiões para posteriormente inserir os nodos.
-		int nodosInReg = 0;
+		int nodosForReg = 0;
 		idNodesRegioes.clear();
 		for (int i = 0; i < R; i++) {
 				
@@ -133,27 +132,28 @@ public class TCA_RealGenerator implements IAlgorithm
 			posicoes.clear();			
 			for (int ir = xi; ir < xf; ir++) {
 				for (int jr = yi; jr < yf; jr++) {
+					// * fazer um teste para nao pegar posição do plnao já ocupada
 					posicoes.add(Pair.of(ir, jr));
 				}
 			}
-			System.out.println("Tamanho do vetor de posicoes = "+posicoes.size());
 			
+			// sorteia quantos nodos vão ser inseridos na região R
+			// 'i == 0' serve para evitar que muitos nos ficassem na primeira regiao.
 			if(N == 1){
-				nodosInReg = 1;
+				nodosForReg = 1;
 			}else{
-				nodosInReg = r.nextInt(Math.min((i == 0 ? N/2 : N), (int)cap)); //sorteia quantos nodos vão ser inseridos na região R
+				nodosForReg = r.nextInt(Math.min((i == 0 ? N/2 : N), (int)cap)); 
 			}
-			System.out.println("Numero de nodos sorteados = "+nodosInReg);
 			
 			// laço para inserir cada nodo k na região i.
 			List<Long> idNodesReg = new ArrayList<Long>();
-			for(int k = 0; k < nodosInReg; k++){
+			for(int k = 0; k < nodosForReg; k++){
 				if(posicoes.size() > 0){
 					int posicaoSorteada = r.nextInt(posicoes.size());
 					int pi = posicoes.get(posicaoSorteada).getFirst();
 					int pj = posicoes.get(posicaoSorteada).getSecond();
 					
-					if(plano[pi][pj] == 0){
+					if(plano[pi][pj] == 0){  // se está livre a posicao, mais um teste para garantir
 						//netPlan.addNode(pi, pj, k+" "+i, null);
 						idNodesReg.add(netPlan.addNode(pi, pj, k+" "+i, null));
 						posicoes.remove(posicaoSorteada);
@@ -186,13 +186,12 @@ public class TCA_RealGenerator implements IAlgorithm
 			int i = 0;
 			List<Long> regOrdenada = new ArrayList<Long>();
 			if(!reg.isEmpty()) regOrdenada.add(reg.get(i));
-			System.out.println(reg);
-			while(reg.size()>0){
+			//System.out.println(reg);
+			while(reg.size()>1){
 				int nexti = 0;
 				long originNodeId = reg.get(i), idD = 0;
 				double pmax = 0, dist = 0;
-				
-				for (int j = 1; j < reg.size(); j++) {
+				for (int j = 0; j < reg.size(); j++) {
 					long destinationNodeId = reg.get(j);
 					if (originNodeId == destinationNodeId) continue;
 					
@@ -205,82 +204,38 @@ public class TCA_RealGenerator implements IAlgorithm
 						nexti = j;
 					}
 				}
-				
 				regOrdenada.add(idD);
-				System.out.print("+>");
-				System.out.println(regOrdenada);
-				//netPlan.addLink(originNodeId, idD, linkCapacities, dist, null);
 				reg.remove(i);
-				if(i>nexti){
+				
+				if(i > nexti){
 					i = nexti;
 				}else{
 					i = (nexti -1);
 				}
-				
-				System.out.print("->");
-				System.out.println(reg);
-				System.out.println();
-
 			}
+			
 			for (int j = 1; j < regOrdenada.size(); j++) {
 				long origin = regOrdenada.get(j-1), destination = regOrdenada.get(j);
 				if (origin == destination) continue;
 				netPlan.addLink(origin, destination, linkCapacities, 10, null);
 			}
-			
-			//System.out.println(regOrdenada);
-			System.out.println();
-			//netPlan.addLink(originNodeId, idD, linkCapacities, dist, null);
+			if(regOrdenada.size()>1)
+				netPlan.addLink(regOrdenada.get(0), regOrdenada.get(regOrdenada.size()-1), linkCapacities, 10, null);
 			
 		}
-		
-		/*
-		Set<Long> nodeIds = netPlan.getNodeIds();
-		double dist_max = -Double.MAX_VALUE;
-		for (long destinationNodeId : nodeIds)
-		{
-			for (long originNodeId : nodeIds)
-			{
-				if (originNodeId >= destinationNodeId) break;
-
-				double dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
-				if (dist > dist_max) dist_max = dist;
-			}
-		}
-		*/
-		
-		/* Generate a directed link between each node pair with probability p = alpha * exp(-distance/(beta * max_distance)) */
-		
-		/*
-		for (long destinationNodeId : nodeIds)
-		{
-			for (long originNodeId : nodeIds)
-			{
-				if (originNodeId >= destinationNodeId) break;
-				double dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
-				double p = alpha * Math.exp(-dist / (beta * dist_max));
-
-				if (r.nextDouble() < p)
-					netPlan.addLink(originNodeId, destinationNodeId, linkCapacities, dist, null);
-			}
-		}
-		*/		
-		
-		
-//		for (List<Long> long1 : idNodesRegioes) {
-//			System.out.println(long1);
-//		}
-		
+				
 		return "Ok! | Nodos não inseridos: " + N;
 	}
 
 	private int[][] insereNodo(int pi, int pj, int[][] plano, int x, int y, int d) {
 		plano[pi][pj] = 2;
+		// seleciona a area para colocar a sombra
 		int lini = Math.max(0, pi-d);
 		int lfim = Math.min(x-1, pi+d);
 		int cini = Math.max(0, pj-d);
 		int cfim = Math.min(y-1, pj+d);
 		
+		// coloca a sombra e remove do vetor de posicoes
 		for (int l = lini; l <= lfim; l++) {
 			for (int c = cini; c <= cfim; c++) {
 				posicoes.remove(Pair.of(l, c));
@@ -303,7 +258,7 @@ public class TCA_RealGenerator implements IAlgorithm
 		algorithmParameters.add(Triple.of("ymax", "100", "Upper endpoint for the y-axis"));
 		algorithmParameters.add(Triple.of("ymin", "0", "Lower endpoint for the y-axis"));
 		algorithmParameters.add(Triple.of("R", "6", "Regions"));
-		algorithmParameters.add(Triple.of("d", "2", "Minimum distance between two nodes"));
+		algorithmParameters.add(Triple.of("d", "6", "Minimum distance between two nodes"));
 		algorithmParameters.add(Triple.of("linkCapacities", "100", "The capacities to set in the links"));
 		return algorithmParameters;
 	}
