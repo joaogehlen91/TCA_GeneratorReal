@@ -166,6 +166,29 @@ public class TCA_RealGenerator implements IAlgorithm
 			if(N==0) break;
 		}
 
+		//falta fazer essa parte: inserir links entre regioes
+		for (List<Long> lista1 : ListadasListas) {
+			
+			for (List<Long> lista2 : ListadasListas) {
+				if(lista1 == lista2 ) continue;
+				int pmax = 0;
+				for (Long long1 : lista1) {
+					for (Long long2 : lista2) {
+						
+						dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
+						double p = alpha * Math.exp(-dist / (beta * dist_max));
+						
+						if(p > pmax) {
+							pmax = p;
+							noOrigem = long1;
+							nodestino = long2;
+						}
+					}
+				}
+				// aqui add link
+			}
+			
+		}
 		
 		/* daqui pra baixo é pra inserir os links(arestas)  */
 		for (List<Long> reg : idNodesRegioes) {
@@ -223,6 +246,14 @@ public class TCA_RealGenerator implements IAlgorithm
 				netPlan.addLink(regOrdenada.get(0), regOrdenada.get(regOrdenada.size()-1), linkCapacities, 10, null);
 			
 		}
+		
+		for (int l = 0; l < 100; l++) {
+			for (int c = 0; c < 100; c++) {
+				System.out.print(plano[l][c]);
+			}
+			System.out.println();
+		}
+		
 				
 		return "Ok! | Nodos não inseridos: " + N;
 	}
