@@ -163,37 +163,22 @@ public class TCA_RealGenerator implements IAlgorithm
 				}
 			}
 			idNodesRegioes.add(idNodesReg);
+			
 			if(N==0) break;
 		}
-
-		//falta fazer essa parte: inserir links entre regioes
-		for (List<Long> lista1 : ListadasListas) {
-			
-			for (List<Long> lista2 : ListadasListas) {
-				if(lista1 == lista2 ) continue;
-				int pmax = 0;
-				for (Long long1 : lista1) {
-					for (Long long2 : lista2) {
-						
-						dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
-						double p = alpha * Math.exp(-dist / (beta * dist_max));
-						
-						if(p > pmax) {
-							pmax = p;
-							noOrigem = long1;
-							nodestino = long2;
-						}
-					}
-				}
-				// aqui add link
-			}
-			
+		
+		// eu odeio java !!!!!
+		List<List<Long>> idNodesRegioesAux = new ArrayList<List<Long>>();
+		for (List<Long> list : idNodesRegioes) {
+			List<Long> idNodesRegAux = new ArrayList<Long>(list);
+			idNodesRegioesAux.add(idNodesRegAux);
 		}
 		
 		/* daqui pra baixo é pra inserir os links(arestas)  */
+		double dist_max = -Double.MAX_VALUE;
 		for (List<Long> reg : idNodesRegioes) {
 			
-			double dist_max = -Double.MAX_VALUE;
+			//double dist_max = -Double.MAX_VALUE;
 			for (long destinationNodeId : reg)
 			{
 				for (long originNodeId : reg)
@@ -247,12 +232,44 @@ public class TCA_RealGenerator implements IAlgorithm
 			
 		}
 		
-		for (int l = 0; l < 100; l++) {
-			for (int c = 0; c < 100; c++) {
-				System.out.print(plano[l][c]);
+		System.out.println(idNodesRegioesAux);
+		
+		
+		//falta fazer essa parte: inserir links entre regioes
+		for (List<Long> reg1 : idNodesRegioesAux) {
+			long noOrigem = 0, noDestino = 0;
+			double pmax = 0;
+			for (Long no1 : reg1) {
+				for (List<Long> reg2 : idNodesRegioesAux) {
+					if(reg1 == reg2 ) continue;
+					
+					for (Long no2 : reg2) {
+							
+						double dist = netPlan.getNodePairEuclideanDistance(no1, no2);
+						double p = alpha * Math.exp(-dist / (beta * dist_max));
+						
+						if(p > pmax) {
+							pmax = p;
+							noOrigem = no1;
+							noDestino = no2;
+						}
+					}	
+				}
 			}
-			System.out.println();
+			// aqui add link
+			if (noDestino != noOrigem) {
+				netPlan.addLink(noOrigem, noDestino, linkCapacities, 10, null);
+			}
+			
 		}
+
+		
+//		for (int l = 0; l < 100; l++) {
+//			for (int c = 0; c < 100; c++) {
+//				System.out.print(plano[l][c]);
+//			}
+//			System.out.println();
+//		}
 		
 				
 		return "Ok! | Nodos não inseridos: " + N;
