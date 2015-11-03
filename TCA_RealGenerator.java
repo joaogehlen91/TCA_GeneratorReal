@@ -167,7 +167,6 @@ public class TCA_RealGenerator implements IAlgorithm
 			if(N==0) break;
 		}
 		
-		// eu odeio java !!!!!
 		List<List<Long>> idNodesRegioesAux = new ArrayList<List<Long>>();
 		for (List<Long> list : idNodesRegioes) {
 			List<Long> idNodesRegAux = new ArrayList<Long>(list);
