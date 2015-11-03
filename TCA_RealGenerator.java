@@ -222,47 +222,61 @@ public class TCA_RealGenerator implements IAlgorithm
 				}
 			}
 			
-			for (int j = 1; j < regOrdenada.size(); j++) {
-				long origin = regOrdenada.get(j-1), destination = regOrdenada.get(j);
-				if (origin == destination) continue;
-				netPlan.addLink(origin, destination, linkCapacities, 10, null);
-			}
-			if(regOrdenada.size()>1)
+			if(regOrdenada.size()==2){
 				netPlan.addLink(regOrdenada.get(0), regOrdenada.get(regOrdenada.size()-1), linkCapacities, 10, null);
-			
+				netPlan.addLink(regOrdenada.get(regOrdenada.size()-1), regOrdenada.get(0), linkCapacities, 10, null);
+			}else{
+				for (int j = 1; j < regOrdenada.size(); j++) {
+					long origin = regOrdenada.get(j-1), destination = regOrdenada.get(j);
+					if (origin == destination) continue;
+					netPlan.addLink(origin, destination, linkCapacities, 10, null);
+					netPlan.addLink(destination, origin, linkCapacities, 10, null);
+				}
+				if(regOrdenada.size()>2){
+					netPlan.addLink(regOrdenada.get(0), regOrdenada.get(regOrdenada.size()-1), linkCapacities, 10, null);
+					netPlan.addLink(regOrdenada.get(regOrdenada.size()-1), regOrdenada.get(0), linkCapacities, 10, null);
+				}
+				
+			}
 		}
 		
-		System.out.println(idNodesRegioesAux);
+		// essa parte eh que faz a ligacao entre regioes, tomando os nos com a maior probabilidade de existir um link
+		Set<Long> nodeIds = netPlan.getNodeIds();
+		dist_max = -Double.MAX_VALUE;
+		for (long destinationNodeId : nodeIds)
+		{
+			for (long originNodeId : nodeIds)
+			{
+				if (originNodeId >= destinationNodeId) break;
+
+				double dist = netPlan.getNodePairEuclideanDistance(originNodeId, destinationNodeId);
+				if (dist > dist_max) dist_max = dist;
+			}
+		}
 		
-		
-		//falta fazer essa parte: inserir links entre regioes
 		for (List<Long> reg1 : idNodesRegioesAux) {
 			long noOrigem = 0, noDestino = 0;
-			double pmax = 0;
 			for (Long no1 : reg1) {
+				double pmax = 0;
 				for (List<Long> reg2 : idNodesRegioesAux) {
 					if(reg1 == reg2 ) continue;
-					
 					for (Long no2 : reg2) {
-							
 						double dist = netPlan.getNodePairEuclideanDistance(no1, no2);
 						double p = alpha * Math.exp(-dist / (beta * dist_max));
-						
 						if(p > pmax) {
 							pmax = p;
 							noOrigem = no1;
 							noDestino = no2;
 						}
-					}	
+					}
 				}
 			}
-			// aqui add link
+			// depois de testar qual sao os nos que vao receber link, eh aqui que insere o link
 			if (noDestino != noOrigem) {
 				netPlan.addLink(noOrigem, noDestino, linkCapacities, 10, null);
+				netPlan.addLink(noDestino, noOrigem, linkCapacities, 10, null);
 			}
-			
 		}
-
 		
 //		for (int l = 0; l < 100; l++) {
 //			for (int c = 0; c < 100; c++) {
