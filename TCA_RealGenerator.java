@@ -34,6 +34,8 @@ public class TCA_RealGenerator implements IAlgorithm
 		int N = Integer.parseInt(algorithmParameters.get("N"));
 		double alpha = Double.parseDouble(algorithmParameters.get("alpha"));
 		double beta = Double.parseDouble(algorithmParameters.get("beta"));
+		double gmin = Double.parseDouble(algorithmParameters.get("gmin"));
+		double gmax = Double.parseDouble(algorithmParameters.get("gmax"));
 		double xmax = Double.parseDouble(algorithmParameters.get("xmax"));
 		double xmin = Double.parseDouble(algorithmParameters.get("xmin"));
 		double ymax = Double.parseDouble(algorithmParameters.get("ymax"));
@@ -106,16 +108,6 @@ public class TCA_RealGenerator implements IAlgorithm
 			}
 		}
 		
-//		System.out.println("Lin = "+lin);
-//		System.out.println("Col = "+col);
-//		System.out.println("Capacidade de cada regiao = "+cap);
-//		
-//		for (int[] is : indiceRegiao) {
-//			for (int i : is) {
-//				System.out.print("\t"+i);
-//			}
-//			System.out.println();
-//		}
 		
 		// laço que vai percorrer as regiões para posteriormente inserir os nodos.
 		int nodosForReg = 0;
@@ -167,14 +159,13 @@ public class TCA_RealGenerator implements IAlgorithm
 			if(N==0) break;
 		}
 		
-		// eu odeio java !!!!!
 		List<List<Long>> idNodesRegioesAux = new ArrayList<List<Long>>();
 		for (List<Long> list : idNodesRegioes) {
 			List<Long> idNodesRegAux = new ArrayList<Long>(list);
 			idNodesRegioesAux.add(idNodesRegAux);
 		}
 		
-		/* daqui pra baixo é pra inserir os links(arestas)  */
+		/* daqui pra baixo é pra inserir os links(arestas) entre nos da mesma região  */
 		double dist_max = -Double.MAX_VALUE;
 		for (List<Long> reg : idNodesRegioes) {
 			
@@ -243,6 +234,7 @@ public class TCA_RealGenerator implements IAlgorithm
 		// essa parte eh que faz a ligacao entre regioes, tomando os nos com a maior probabilidade de existir um link
 		Set<Long> nodeIds = netPlan.getNodeIds();
 		dist_max = -Double.MAX_VALUE;
+		// for para iniciar a variavel 'dist_max' com a maior distancia entre dois nos.
 		for (long destinationNodeId : nodeIds)
 		{
 			for (long originNodeId : nodeIds)
@@ -254,6 +246,9 @@ public class TCA_RealGenerator implements IAlgorithm
 			}
 		}
 		
+		int indexNoOrigem = 0, indexNoDestino = 0, indexRegOrigem = 0, indexRegDestino = 0;
+		for (int j = 0; j < 2; j++) {
+					
 		for (List<Long> reg1 : idNodesRegioesAux) {
 			long noOrigem = 0, noDestino = 0;
 			for (Long no1 : reg1) {
@@ -263,10 +258,14 @@ public class TCA_RealGenerator implements IAlgorithm
 					for (Long no2 : reg2) {
 						double dist = netPlan.getNodePairEuclideanDistance(no1, no2);
 						double p = alpha * Math.exp(-dist / (beta * dist_max));
-						if(p > pmax) {
+						if(p < pmax) {
 							pmax = p;
 							noOrigem = no1;
 							noDestino = no2;
+							indexRegOrigem = idNodesRegioesAux.indexOf(reg1);
+							indexRegDestino = idNodesRegioesAux.indexOf(reg2);
+							indexNoOrigem = reg1.indexOf(noOrigem);
+							indexNoDestino = reg2.indexOf(noDestino);
 						}
 					}
 				}
@@ -275,15 +274,28 @@ public class TCA_RealGenerator implements IAlgorithm
 			if (noDestino != noOrigem) {
 				netPlan.addLink(noOrigem, noDestino, linkCapacities, 10, null);
 				netPlan.addLink(noDestino, noOrigem, linkCapacities, 10, null);
-			}
+				
+				System.out.print("Link: ");
+				System.out.print(idNodesRegioesAux.get(indexRegOrigem).get(indexNoOrigem));
+				System.out.print(" " + noOrigem +" <-> " + noDestino + " ");
+				System.out.print(idNodesRegioesAux.get(indexRegDestino).get(indexNoDestino));
+				
+				
+				System.out.println();
+				
+				if (idNodesRegioesAux.get(indexRegOrigem).size() > 1 || j == 1) {
+					System.out.println("Removeu orig");
+					idNodesRegioesAux.get(indexRegOrigem).remove(indexNoOrigem);
+				}
+					
+				if (idNodesRegioesAux.get(indexRegDestino).size() > 1 || j == 1){
+					System.out.println("Removeu dest");
+					idNodesRegioesAux.get(indexRegDestino).remove(indexNoDestino);
+				}
+			}	
+		}
 		}
 		
-//		for (int l = 0; l < 100; l++) {
-//			for (int c = 0; c < 100; c++) {
-//				System.out.print(plano[l][c]);
-//			}
-//			System.out.println();
-//		}
 		
 				
 		return "Ok! | Nodos não inseridos: " + N;
@@ -315,6 +327,8 @@ public class TCA_RealGenerator implements IAlgorithm
 		algorithmParameters.add(Triple.of("N", "30", "Number of nodes"));
 		algorithmParameters.add(Triple.of("alpha", "0.4", "'alpha' factor"));
 		algorithmParameters.add(Triple.of("beta", "0.4", "'beta' factor"));
+		algorithmParameters.add(Triple.of("gmin", "2", "Minimum average nodal degree"));
+		algorithmParameters.add(Triple.of("gmax", "4", "Maximum average nodal degree"));
 		algorithmParameters.add(Triple.of("xmax", "100", "Right endpoint for the x-axis"));
 		algorithmParameters.add(Triple.of("xmin", "0", "Left endpoint for the x-axis"));
 		algorithmParameters.add(Triple.of("ymax", "100", "Upper endpoint for the y-axis"));
