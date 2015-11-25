@@ -108,7 +108,6 @@ public class TCA_RealGenerator implements IAlgorithm
 			}
 		}
 		
-		
 		// laço que vai percorrer as regiões para posteriormente inserir os nodos.
 		int nodosForReg = 0;
 		idNodesRegioes.clear();
@@ -130,11 +129,12 @@ public class TCA_RealGenerator implements IAlgorithm
 			}
 			
 			// sorteia quantos nodos vão ser inseridos na região R
-			// 'i == 0' serve para evitar que muitos nos ficassem na primeira regiao.
+			// 'i == 0' serve para evitar que muitos nos fiquem na primeira regiao.
 			if(N == 1){
 				nodosForReg = 1;
 			}else{
-				nodosForReg = r.nextInt(Math.min((i == 0 ? N/2 : N), (int)cap)); 
+				nodosForReg = r.nextInt(Math.min((i == 0 ? N/2 : N), (int)cap));
+				if(nodosForReg == 1) nodosForReg = 2;
 			}
 			
 			// laço para inserir cada nodo k na região i.
@@ -146,7 +146,6 @@ public class TCA_RealGenerator implements IAlgorithm
 					int pj = posicoes.get(posicaoSorteada).getSecond();
 					
 					if(plano[pi][pj] == 0){  // se está livre a posicao, mais um teste para garantir
-						//netPlan.addNode(pi, pj, k+" "+i, null);
 						idNodesReg.add(netPlan.addNode(pi, pj, k+" "+i, null));
 						posicoes.remove(posicaoSorteada);
 						plano = insereNodo(pi, pj, plano, x, y, (int) d);
@@ -165,11 +164,10 @@ public class TCA_RealGenerator implements IAlgorithm
 			idNodesRegioesAux.add(idNodesRegAux);
 		}
 		
-		/* daqui pra baixo é pra inserir os links(arestas) entre nos da mesma região  */
+		// daqui pra baixo é pra inserir os links(arestas) entre nos da mesma região
 		double dist_max = -Double.MAX_VALUE;
 		for (List<Long> reg : idNodesRegioes) {
 			
-			//double dist_max = -Double.MAX_VALUE;
 			for (long destinationNodeId : reg)
 			{
 				for (long originNodeId : reg)
@@ -185,7 +183,6 @@ public class TCA_RealGenerator implements IAlgorithm
 			int i = 0;
 			List<Long> regOrdenada = new ArrayList<Long>();
 			if(!reg.isEmpty()) regOrdenada.add(reg.get(i));
-			//System.out.println(reg);
 			while(reg.size()>1){
 				int nexti = 0;
 				long originNodeId = reg.get(i), idD = 0;
@@ -227,7 +224,6 @@ public class TCA_RealGenerator implements IAlgorithm
 					netPlan.addLink(regOrdenada.get(0), regOrdenada.get(regOrdenada.size()-1), linkCapacities, 10, null);
 					netPlan.addLink(regOrdenada.get(regOrdenada.size()-1), regOrdenada.get(0), linkCapacities, 10, null);
 				}
-				
 			}
 		}
 		
@@ -249,67 +245,63 @@ public class TCA_RealGenerator implements IAlgorithm
 		int indexNoOrigem = 0, indexNoDestino = 0, indexRegOrigem = 0, indexRegDestino = 0;
 		for (int j = 0; j < 2; j++) {
 					
-		for (List<Long> reg1 : idNodesRegioesAux) {
-			long noOrigem = 0, noDestino = 0;
-			for (Long no1 : reg1) {
-				double pmax = 0;
-				for (List<Long> reg2 : idNodesRegioesAux) {
-					if(reg1 == reg2 ) continue;
-					for (Long no2 : reg2) {
-						double dist = netPlan.getNodePairEuclideanDistance(no1, no2);
-						double p = alpha * Math.exp(-dist / (beta * dist_max));
-						if(p < pmax) {
-							pmax = p;
-							noOrigem = no1;
-							noDestino = no2;
-							indexRegOrigem = idNodesRegioesAux.indexOf(reg1);
-							indexRegDestino = idNodesRegioesAux.indexOf(reg2);
-							indexNoOrigem = reg1.indexOf(noOrigem);
-							indexNoDestino = reg2.indexOf(noDestino);
+			for (List<Long> reg1 : idNodesRegioesAux) {
+				long noOrigem = 0, noDestino = 0;
+				for (Long no1 : reg1) {
+					double pmax = 0;
+					for (List<Long> reg2 : idNodesRegioesAux) {
+						if(reg1 == reg2 ) continue;
+						for (Long no2 : reg2) {
+							double dist = netPlan.getNodePairEuclideanDistance(no1, no2);
+							double p = alpha * Math.exp(-dist / (beta * dist_max));
+							if(p > pmax) {
+								pmax = p;
+								noOrigem = no1;
+								noDestino = no2;
+								indexRegOrigem = idNodesRegioesAux.indexOf(reg1);
+								indexRegDestino = idNodesRegioesAux.indexOf(reg2);
+								indexNoOrigem = reg1.indexOf(noOrigem);
+								indexNoDestino = reg2.indexOf(noDestino);
+							}
 						}
 					}
 				}
-			}
-			// depois de testar qual sao os nos que vao receber link, eh aqui que insere o link
-			if (noDestino != noOrigem) {
-				netPlan.addLink(noOrigem, noDestino, linkCapacities, 10, null);
-				netPlan.addLink(noDestino, noOrigem, linkCapacities, 10, null);
+				// depois de testar qual sao os nos que vao receber link, eh aqui que insere o link
+				if (noDestino != noOrigem) {
+					netPlan.addLink(noOrigem, noDestino, linkCapacities, 10, null);
+					netPlan.addLink(noDestino, noOrigem, linkCapacities, 10, null);
 				
-				System.out.print("Link: ");
-				System.out.print(idNodesRegioesAux.get(indexRegOrigem).get(indexNoOrigem));
-				System.out.print(" " + noOrigem +" <-> " + noDestino + " ");
-				System.out.print(idNodesRegioesAux.get(indexRegDestino).get(indexNoDestino));
-				
-				
-				System.out.println();
-				
-				if (idNodesRegioesAux.get(indexRegOrigem).size() > 1 || j == 1) {
-					System.out.println("Removeu orig");
-					idNodesRegioesAux.get(indexRegOrigem).remove(indexNoOrigem);
-				}
+					System.out.print("Link: ");
+					System.out.print(idNodesRegioesAux.get(indexRegOrigem).get(indexNoOrigem));
+					System.out.print(" " + noOrigem +" <-> " + noDestino + " ");
+					System.out.print(idNodesRegioesAux.get(indexRegDestino).get(indexNoDestino));
+					System.out.println();
 					
-				if (idNodesRegioesAux.get(indexRegDestino).size() > 1 || j == 1){
-					System.out.println("Removeu dest");
-					idNodesRegioesAux.get(indexRegDestino).remove(indexNoDestino);
-				}
-			}	
+					if (idNodesRegioesAux.get(indexRegOrigem).size() > 1 || j == 1) {
+						System.out.println("Removeu orig");
+						idNodesRegioesAux.get(indexRegOrigem).remove(indexNoOrigem);
+					}
+					
+					if (idNodesRegioesAux.get(indexRegDestino).size() > 1 || j == 1){
+						System.out.println("Removeu dest");
+						idNodesRegioesAux.get(indexRegDestino).remove(indexNoDestino);
+					}
+				}	
+			}
 		}
-		}
-		
-		
 				
 		return "Ok! | Nodos não inseridos: " + N;
 	}
 
 	private int[][] insereNodo(int pi, int pj, int[][] plano, int x, int y, int d) {
 		plano[pi][pj] = 2;
-		// seleciona a area para colocar a sombra
+		// selects the area to put the shadow
 		int lini = Math.max(0, pi-d);
 		int lfim = Math.min(x-1, pi+d);
 		int cini = Math.max(0, pj-d);
 		int cfim = Math.min(y-1, pj+d);
 		
-		// coloca a sombra e remove do vetor de posicoes
+		// put the shadow and remove the positions of the vector corresponding to the spaces of the plane
 		for (int l = lini; l <= lfim; l++) {
 			for (int c = cini; c <= cfim; c++) {
 				posicoes.remove(Pair.of(l, c));
@@ -344,14 +336,14 @@ public class TCA_RealGenerator implements IAlgorithm
 	{
 		String NEWLINE = String.format("%n");
 		StringBuilder aux = new StringBuilder();
-		aux.append("Descricao teste");
-		//aux.append("This algorithm implements the random network topology generator introduced in Waxman (1988). The Waxman's generator is a geographic model for the growth of a network. In this model nodes are uniformly distributed in a given area and links are added according to probabilities that depend on the distances between the nodes. The probability to have a link between nodes i and j is given by:");
+		aux.append("This algorithm generates a network topology with characteristics that resemble a real network.");
+		aux.append("To identify and study the key variables of real transport networks, we have collected a set of 29 topologies of real survivable transport networks. The number of nodes ranges from 9 to 100.");
 		aux.append(NEWLINE);
 		aux.append(NEWLINE);
-		//aux.append("P(i, j) = alpha * exp(-d/(beta * d_max)");
+		aux.append("In general, a real-world transport network topology can be seen as a graph over a two-dimensional plane. The nodes are distributed according to the expected traffic demand in each geographic area. Thereby, we often can identify regions with more nodes than the others. Here a region stands for a number of cities or countries.");
 		aux.append(NEWLINE);
 		aux.append(NEWLINE);
-		//aux.append("where 0<alpha, beta<=1, d is the distance from i to j, and d_max is the maximum distance between any two nodes. An increase in the parameter alpha increases the probability of edges between any nodes in the network, while an increase in beta yields a larger ratio of long links to short links.");
+		aux.append("The proposed method is based on the Waxman model.");
 		return aux.toString();
 	}
 	
@@ -369,5 +361,4 @@ public class TCA_RealGenerator implements IAlgorithm
 		}
 		return true;
 	}
-
 }
