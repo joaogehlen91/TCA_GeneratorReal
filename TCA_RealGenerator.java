@@ -270,25 +270,19 @@ public class TCA_RealGenerator implements IAlgorithm
 				if (noDestino != noOrigem) {
 					netPlan.addLink(noOrigem, noDestino, linkCapacities, 10, null);
 					netPlan.addLink(noDestino, noOrigem, linkCapacities, 10, null);
-				
-					System.out.print("Link: ");
-					System.out.print(idNodesRegioesAux.get(indexRegOrigem).get(indexNoOrigem));
-					System.out.print(" " + noOrigem +" <-> " + noDestino + " ");
-					System.out.print(idNodesRegioesAux.get(indexRegDestino).get(indexNoDestino));
-					System.out.println();
 					
-					if (idNodesRegioesAux.get(indexRegOrigem).size() > 1 || j == 1) {
-						System.out.println("Removeu orig");
+					if (idNodesRegioesAux.get(indexRegOrigem).size() > 1 || j == 1){
 						idNodesRegioesAux.get(indexRegOrigem).remove(indexNoOrigem);
 					}
 					
 					if (idNodesRegioesAux.get(indexRegDestino).size() > 1 || j == 1){
-						System.out.println("Removeu dest");
 						idNodesRegioesAux.get(indexRegDestino).remove(indexNoDestino);
 					}
 				}	
 			}
 		}
+		
+		
 				
 		return "Ok! | Nodos não inseridos: " + N;
 	}
